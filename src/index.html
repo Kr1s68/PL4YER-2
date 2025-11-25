@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <title>Console Interface</title>
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="script-src 'self' 'unsafe-inline';"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="ascii-banner">
+      <pre class="ascii-art">
+ ██████╗ ██╗     ██╗  ██╗██╗   ██╗███████╗██████╗
+ ██╔══██╗██║     ██║  ██║╚██╗ ██╔╝██╔════╝██╔══██╗
+ ██████╔╝██║     ███████║ ╚████╔╝ █████╗  ██████╔╝
+ ██╔═══╝ ██║     ╚════██║  ╚██╔╝  ██╔══╝  ██╔══██╗
+ ██║     ███████╗     ██║   ██║   ███████╗██║  ██║
+ ╚═╝     ╚══════╝     ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
+      </pre>
+      <div class="ascii-subtitle">» Local Audio Console Player - Type 'help' to begin</div>
+    </div>
+
+    <!-- Audio timeline (below banner) -->
+    <div class="timeline-container" id="timelineContainer" style="display: none;">
+      <div class="timeline-info">
+        <span class="timeline-song" id="timelineSong">No song playing</span>
+        <span class="timeline-time">
+          <span id="currentTime">0:00</span> / <span id="totalTime">0:00</span>
+        </span>
+      </div>
+      <div class="timeline-bar">
+        <div class="timeline-progress" id="timelineProgress"></div>
+      </div>
+    </div>
+
+    <div class="console-container">
+      <div class="console-output" id="consoleOutput"></div>
+      <div class="console-input-container">
+        <span class="console-prompt">></span>
+        <input
+          type="text"
+          class="console-input"
+          id="consoleInput"
+          placeholder="Enter command..."
+          autocomplete="off"
+        />
+        <button class="clear-btn" id="clearBtn">Clear</button>
+      </div>
+    </div>
+
+    <!-- Hidden audio player -->
+    <audio id="audioPlayer" style="display: none;"></audio>
+
+    <script src="commandHandler.js"></script>
+    <script src="commandProcessor.js"></script>
+    <script>
+      // Console functionality
+      const consoleOutput = document.getElementById('consoleOutput');
+      const consoleInput = document.getElementById('consoleInput');
+      const clearBtn = document.getElementById('clearBtn');
+      const audioPlayer = document.getElementById('audioPlayer');
+
+      // Timeline elements
+      const timelineContainer = document.getElementById('timelineContainer');
+      const timelineSong = document.getElementById('timelineSong');
+      const currentTimeEl = document.getElementById('currentTime');
+      const totalTimeEl = document.getElementById('totalTime');
+      const timelineProgress = document.getElementById('timelineProgress');
+      const timelineBar = document.querySelector('.timeline-bar');
+
+      // Add line to console
+      function addLine(text, type = 'output') {
+        const line = document.createElement('div');
+        line.className = `console-line ${type}`;
+        line.textContent = text;
+        consoleOutput.appendChild(line);
+        consoleOutput.scrollTop = consoleOutput.scrollHeight;
+      }
+
+      // Initialize CommandProcessor with output callback and audio player
+      const commandProcessor = new CommandProcessor(addLine, audioPlayer);
+
+      // Handle input
+      consoleInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter') {
+          const command = consoleInput.value;
+          const result = commandProcessor.processCommand(command);
+
+          // Handle special actions like clear
+          if (result && result.action === 'clear') {
+            consoleOutput.innerHTML = '';
+          }
+
+          consoleInput.value = '';
+        } else if (e.key === 'ArrowUp') {
+          e.preventDefault();
+          const prevCommand = commandProcessor.getPreviousCommand();
+          if (prevCommand !== null) {
+            consoleInput.value = prevCommand;
+          }
+        } else if (e.key === 'ArrowDown') {
+          e.preventDefault();
+          const nextCommand = commandProcessor.getNextCommand();
+          consoleInput.value = nextCommand;
+        }
+      });
+
+      // Clear button
+      clearBtn.addEventListener('click', () => {
+        consoleOutput.innerHTML = '';
+        addLine('Console cleared', 'info');
+      });
+
+      // Focus input on load
+      window.addEventListener('load', () => {
+        consoleInput.focus();
+      });
+
+      // Format time in mm:ss
+      function formatTime(seconds) {
+        if (isNaN(seconds)) return '0:00';
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+      }
+
+      // Audio player event listeners
+      audioPlayer.addEventListener('loadedmetadata', () => {
+        totalTimeEl.textContent = formatTime(audioPlayer.duration);
+      });
+
+      audioPlayer.addEventListener('timeupdate', () => {
+        const currentTime = audioPlayer.currentTime;
+        const duration = audioPlayer.duration;
+
+        currentTimeEl.textContent = formatTime(currentTime);
+
+        if (duration > 0) {
+          const progress = (currentTime / duration) * 100;
+          timelineProgress.style.width = progress + '%';
+        }
+      });
+
+      audioPlayer.addEventListener('play', () => {
+        timelineContainer.style.display = 'block';
+      });
+
+      audioPlayer.addEventListener('pause', () => {
+        // Keep timeline visible when paused
+      });
+
+      audioPlayer.addEventListener('ended', () => {
+        timelineProgress.style.width = '0%';
+        currentTimeEl.textContent = '0:00';
+      });
+
+      // Click on timeline to seek
+      timelineBar.addEventListener('click', (e) => {
+        const rect = timelineBar.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const percentage = clickX / rect.width;
+        const newTime = percentage * audioPlayer.duration;
+
+        if (!isNaN(newTime)) {
+          audioPlayer.currentTime = newTime;
+        }
+      });
+
+      // Update timeline song name when playing
+      window.updateTimelineSong = (songName) => {
+        timelineSong.textContent = `♪ ${songName}`;
+      };
+    </script>
+  </body>
+</html>
