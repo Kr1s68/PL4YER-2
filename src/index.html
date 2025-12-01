@@ -50,9 +50,21 @@
       </div>
     </div>
 
+    <!-- Playlist Drawer -->
+    <div class="playlist-drawer" id="playlistDrawer">
+      <div class="drawer-header">
+        <span class="drawer-title" id="drawerTitle">no playlist</span>
+        <button class="drawer-close" id="drawerClose">×</button>
+      </div>
+      <div class="drawer-content" id="drawerContent">
+        <div class="drawer-empty">select a playlist</div>
+      </div>
+    </div>
+
     <!-- Hidden audio player -->
     <audio id="audioPlayer" style="display: none;"></audio>
 
+    <script src="PlaylistOrchestrator.js"></script>
     <script src="commandHandler.js"></script>
     <script src="commandProcessor.js"></script>
     <script>
@@ -79,8 +91,11 @@
         consoleOutput.scrollTop = consoleOutput.scrollHeight;
       }
 
-      // Initialize CommandProcessor with output callback and audio player
-      const commandProcessor = new CommandProcessor(addLine, audioPlayer);
+      // Initialize PlaylistOrchestrator
+      const playlistOrchestrator = new window.PlaylistOrchestrator();
+
+      // Initialize CommandProcessor with output callback, audio player, and playlist orchestrator
+      const commandProcessor = new CommandProcessor(addLine, audioPlayer, playlistOrchestrator);
 
       // Handle input
       consoleInput.addEventListener('keydown', (e) => {
@@ -154,6 +169,33 @@
       audioPlayer.addEventListener('ended', () => {
         timelineProgress.style.width = '0%';
         currentTimeEl.textContent = '0:00';
+
+        // Auto-advance to next track in playlist
+        const nextTrack = playlistOrchestrator.getNextTrack();
+        if (nextTrack) {
+          try {
+            audioPlayer.src = nextTrack.path;
+            audioPlayer.play();
+
+            addLine(`Now playing: ${nextTrack.title}`, 'success');
+            const remaining = playlistOrchestrator.getRemainingTracksCount();
+            if (remaining > 0) {
+              addLine(`${remaining} track(s) remaining in playlist`, 'info');
+            }
+
+            // Update timeline with song name
+            window.updateTimelineSong(nextTrack.title);
+
+            // Update drawer to highlight current track
+            window.updateDrawerCurrentTrack();
+          } catch (error) {
+            addLine(`Error playing next track: ${error.message}`, 'error');
+          }
+        } else {
+          // Playlist finished
+          addLine('Playlist finished', 'info');
+          timelineSong.textContent = 'No song playing';
+        }
       });
 
       // Click on timeline to seek
@@ -172,6 +214,84 @@
       window.updateTimelineSong = (songName) => {
         timelineSong.textContent = `♪ ${songName}`;
       };
+
+      // Playlist drawer functionality
+      const playlistDrawer = document.getElementById('playlistDrawer');
+      const drawerTitle = document.getElementById('drawerTitle');
+      const drawerContent = document.getElementById('drawerContent');
+      const drawerClose = document.getElementById('drawerClose');
+
+      // Open drawer with playlist
+      window.openPlaylistDrawer = (playlistName, playlist) => {
+        drawerTitle.textContent = `> ${playlistName}`;
+        updateDrawerContent(playlist);
+        playlistDrawer.classList.add('open');
+      };
+
+      // Close drawer
+      window.closePlaylistDrawer = () => {
+        playlistDrawer.classList.remove('open');
+      };
+
+      // Update drawer content with playlist tracks
+      function updateDrawerContent(playlist) {
+        if (!playlist || playlist.tracks.length === 0) {
+          drawerContent.innerHTML = '<div class="drawer-empty">empty</div>';
+          return;
+        }
+
+        const currentTrackIndex = playlistOrchestrator.currentTrackIndex;
+
+        let html = '';
+        playlist.tracks.forEach((track, index) => {
+          const isCurrent = index === currentTrackIndex;
+          const currentClass = isCurrent ? ' current' : '';
+          const indicator = isCurrent ? '>' : ' ';
+
+          html += `<div class="drawer-track${currentClass}" data-track-index="${index}"><span class="track-number">${indicator} ${String(index + 1).padStart(2, '0')}</span><span class="track-title">${track.title}</span></div>`;
+        });
+
+        // Add stats footer
+        html += `<div class="drawer-stats">${playlist.tracks.length} tracks</div>`;
+
+        drawerContent.innerHTML = html;
+
+        // Scroll current track into view
+        if (currentTrackIndex >= 0) {
+          setTimeout(() => {
+            const currentTrackEl = drawerContent.querySelector('.drawer-track.current');
+            if (currentTrackEl) {
+              currentTrackEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
+          }, 100);
+        }
+      }
+
+      // Update drawer to highlight current track
+      window.updateDrawerCurrentTrack = () => {
+        const playlist = playlistOrchestrator.getSelectedPlaylist();
+        if (playlist && playlistDrawer.classList.contains('open')) {
+          updateDrawerContent(playlist);
+        }
+      };
+
+      // Close drawer button
+      drawerClose.addEventListener('click', () => {
+        window.closePlaylistDrawer();
+      });
+
+      // Click outside drawer to close (optional)
+      document.addEventListener('click', (e) => {
+        if (playlistDrawer.classList.contains('open') &&
+            !playlistDrawer.contains(e.target) &&
+            e.target !== playlistDrawer) {
+          // Don't close if clicking in console
+          if (!e.target.closest('.console-container') &&
+              !e.target.closest('.console-input-container')) {
+            // Only if clicking outside main areas
+          }
+        }
+      });
     </script>
   </body>
 </html>
