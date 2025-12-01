@@ -8,6 +8,8 @@ class CommandHandler {
     // Import Node.js modules (available due to nodeIntegration: true)
     this.fs = require('fs');
     this.path = require('path');
+    this.spawn = require('child_process').spawn;
+    this.exec = require('child_process').exec;
   }
 
   // Output helper method
@@ -20,15 +22,17 @@ class CommandHandler {
   // Command handlers
   handleHelp() {
     this.output('Available commands:', 'info');
-    this.output('  help            - Show this help message', 'info');
-    this.output('  clear           - Clear the console', 'info');
-    this.output('  list            - List all audio files in current directory', 'info');
-    this.output('  play <file|#>   - Play audio file by name or index (alias: p)', 'info');
-    this.output('  debug           - Show debug information and API status', 'info');
-    this.output('  date            - Show current date and time', 'info');
-    this.output('  version         - Show version information', 'info');
-    this.output('  echo <msg>      - Echo a message', 'info');
-    this.output('  calc <exp>      - Calculate a mathematical expression', 'info');
+    this.output('  help                    - Show this help message', 'info');
+    this.output('  clear                   - Clear the console', 'info');
+    this.output('  list                    - List all audio files in current directory', 'info');
+    this.output('  play <file|#>           - Play audio file by name or index (alias: p)', 'info');
+    this.output('  download <url> [name]   - Download YouTube video as MP3 (alias: dl)', 'info');
+    this.output('                            Requires: Python & yt-dlp', 'info');
+    this.output('  debug                   - Show debug information and API status', 'info');
+    this.output('  date                    - Show current date and time', 'info');
+    this.output('  version                 - Show version information', 'info');
+    this.output('  echo <msg>              - Echo a message', 'info');
+    this.output('  calc <exp>              - Calculate a mathematical expression', 'info');
   }
 
   handleClear() {
@@ -186,6 +190,136 @@ class CommandHandler {
   handleUnknown(command) {
     this.output(`Unknown command: ${command}`, 'error');
     this.output(`Type 'help' for available commands`, 'info');
+  }
+
+  // Check if yt-dlp is installed
+  checkYtDlp(callback) {
+    this.exec('yt-dlp --version', (error, stdout) => {
+      if (error) {
+        callback(false, null);
+      } else {
+        callback(true, stdout.trim());
+      }
+    });
+  }
+
+  handleDownload(command) {
+    // Parse command
+    const parts = command.trim().split(/\s+/);
+    const url = parts[1];
+    const customFilename = parts.slice(2).join(' ');
+
+    if (!url) {
+      this.output('Usage: download <youtube-url> [filename]', 'error');
+      this.output('Example: download https://youtube.com/watch?v=xxx my-song', 'info');
+      return;
+    }
+
+    // Check if yt-dlp is installed
+    this.checkYtDlp((isInstalled, version) => {
+      if (!isInstalled) {
+        this.output('yt-dlp is not installed', 'error');
+        this.output('', 'output');
+        this.output('Installation instructions:', 'info');
+        this.output('1. Install Python: https://www.python.org/downloads/', 'info');
+        this.output('2. Install yt-dlp: pip install yt-dlp', 'info');
+        this.output('', 'output');
+        this.output('See data/README.md for detailed instructions', 'info');
+        return;
+      }
+
+      this.output(`Using yt-dlp ${version}`, 'info');
+      this.output('Starting download...', 'info');
+
+      // Build yt-dlp command
+      const currentDir = process.cwd();
+      const outputTemplate = customFilename
+        ? customFilename.replace(/\.mp3$/i, '') + '.%(ext)s'
+        : '%(title)s.%(ext)s';
+
+      const args = [
+        '-x',                          // Extract audio
+        '--audio-format', 'mp3',       // Convert to MP3
+        '--audio-quality', '0',        // Best quality
+        '--output', outputTemplate,    // Output filename
+        '--newline',                   // Progress on new lines
+        '--no-warnings',               // Suppress warnings
+        '--progress',                  // Show progress
+        url
+      ];
+
+      // Spawn yt-dlp process
+      const ytdlp = this.spawn('yt-dlp', args, {
+        cwd: currentDir,
+        shell: true
+      });
+
+      let currentProgress = 0;
+
+      // Parse stdout for progress and info
+      ytdlp.stdout.on('data', (data) => {
+        const output = data.toString();
+        const lines = output.split('\n');
+
+        lines.forEach(line => {
+          line = line.trim();
+          if (!line) return;
+
+          // Parse progress: [download]  45.2% of 3.45MiB at 1.23MiB/s ETA 00:02
+          if (line.includes('[download]') && line.includes('%')) {
+            const match = line.match(/(\d+\.?\d*)%/);
+            if (match) {
+              const progress = parseFloat(match[1]);
+              // Only show every 10%
+              if (Math.floor(progress / 10) > Math.floor(currentProgress / 10)) {
+                this.output(`Progress: ${Math.floor(progress)}%`, 'info');
+                currentProgress = progress;
+              }
+            }
+          }
+
+          // Show destination filename
+          if (line.includes('[download] Destination:')) {
+            const filename = line.split('Destination:')[1].trim();
+            this.output(`Filename: ${filename}`, 'info');
+          }
+
+          // Show post-processing info
+          if (line.includes('[ExtractAudio]')) {
+            this.output('Converting to MP3...', 'info');
+          }
+        });
+      });
+
+      // Parse stderr for errors
+      ytdlp.stderr.on('data', (data) => {
+        const error = data.toString().trim();
+        if (error && !error.includes('WARNING')) {
+          this.output(`Error: ${error}`, 'error');
+        }
+      });
+
+      // Handle process completion
+      ytdlp.on('close', (code) => {
+        if (code === 0) {
+          this.output('✓ Download complete!', 'success');
+          this.output('Use "list" to see it in your library', 'info');
+        } else {
+          this.output(`Download failed with code ${code}`, 'error');
+          this.output('', 'output');
+          this.output('Possible solutions:', 'info');
+          this.output('1. Check if the URL is valid and video is available', 'info');
+          this.output('2. Try updating yt-dlp: pip install -U yt-dlp', 'info');
+          this.output('3. Some videos may be region-locked or age-restricted', 'info');
+        }
+      });
+
+      // Handle process errors
+      ytdlp.on('error', (err) => {
+        this.output(`Failed to start yt-dlp: ${err.message}`, 'error');
+        this.output('Make sure yt-dlp is installed: pip install yt-dlp', 'info');
+      });
+    });
   }
 }
 

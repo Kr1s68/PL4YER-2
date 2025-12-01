@@ -82,6 +82,10 @@ class CommandProcessor {
       case 'p':
         return this.commandHandler.handlePlay(command);
 
+      case 'download':
+      case 'dl':
+        return this.commandHandler.handleDownload(command);
+
       default:
         // Handle commands with parameters
         if (cmd.startsWith('echo ')) {
@@ -90,6 +94,8 @@ class CommandProcessor {
           return this.commandHandler.handleCalculator(command);
         } else if (cmd.startsWith('play ') || cmd.startsWith('p ')) {
           return this.commandHandler.handlePlay(command);
+        } else if (cmd.startsWith('download ') || cmd.startsWith('dl ')) {
+          return this.commandHandler.handleDownload(command);
         } else {
           return this.commandHandler.handleUnknown(command);
         }
