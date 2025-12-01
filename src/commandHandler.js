@@ -1,9 +1,10 @@
 class CommandHandler {
-  constructor(outputCallback, audioPlayer) {
+  constructor(outputCallback, audioPlayer, playlistOrchestrator) {
     this.outputCallback = outputCallback;
     this.audioPlayer = audioPlayer;
     this.audioFiles = []; // Store list of audio files for indexing
     this.currentlyPlaying = null;
+    this.playlistOrchestrator = playlistOrchestrator;
 
     // Import Node.js modules (available due to nodeIntegration: true)
     this.fs = require('fs');
@@ -22,17 +23,32 @@ class CommandHandler {
   // Command handlers
   handleHelp() {
     this.output('Available commands:', 'info');
+    this.output('', 'output');
+    this.output('General:', 'info');
     this.output('  help                    - Show this help message', 'info');
     this.output('  clear                   - Clear the console', 'info');
-    this.output('  list                    - List all audio files in current directory', 'info');
-    this.output('  play <file|#>           - Play audio file by name or index (alias: p)', 'info');
-    this.output('  download <url> [name]   - Download YouTube video as MP3 (alias: dl)', 'info');
-    this.output('                            Requires: Python & yt-dlp', 'info');
-    this.output('  debug                   - Show debug information and API status', 'info');
     this.output('  date                    - Show current date and time', 'info');
     this.output('  version                 - Show version information', 'info');
     this.output('  echo <msg>              - Echo a message', 'info');
     this.output('  calc <exp>              - Calculate a mathematical expression', 'info');
+    this.output('  debug                   - Show debug information and API status', 'info');
+    this.output('', 'output');
+    this.output('Audio:', 'info');
+    this.output('  list                    - List all audio files in current directory', 'info');
+    this.output('  play <file|#>           - Play audio file by name or index (alias: p)', 'info');
+    this.output('  download <url> [name]   - Download YouTube video as MP3 (alias: dl)', 'info');
+    this.output('                            Requires: Python & yt-dlp', 'info');
+    this.output('', 'output');
+    this.output('Playlists:', 'info');
+    this.output('  playlist -n <name>      - Create a new playlist', 'info');
+    this.output('  playlist -add <pl> <song> - Add song to specified playlist', 'info');
+    this.output('  playlist <name>         - Select/activate a playlist', 'info');
+    this.output('  playlist -list          - List all playlists', 'info');
+    this.output('  playlist -show <name>   - Show playlist details', 'info');
+    this.output('  playlist -rm <name> <#> - Remove track from playlist', 'info');
+    this.output('  playlist -del <name>    - Delete a playlist', 'info');
+    this.output('  add <song>              - Add song to currently selected playlist', 'info');
+    this.output('  play                    - Play currently selected playlist', 'info');
   }
 
   handleClear() {
@@ -320,6 +336,265 @@ class CommandHandler {
         this.output('Make sure yt-dlp is installed: pip install yt-dlp', 'info');
       });
     });
+  }
+
+  // Playlist command handlers
+  handlePlaylist(command) {
+    if (!this.playlistOrchestrator) {
+      this.output('Error: Playlist system not available', 'error');
+      return;
+    }
+
+    const parts = command.trim().split(/\s+/);
+    const flag = parts[1];
+
+    // playlist -n <name> - Create new playlist
+    if (flag === '-n') {
+      const name = parts.slice(2).join(' ');
+      if (!name) {
+        this.output('Usage: playlist -n <name>', 'error');
+        return;
+      }
+
+      const result = this.playlistOrchestrator.createPlaylist(name);
+      this.output(result.message, result.success ? 'success' : 'error');
+      return;
+    }
+
+    // playlist -add <playlist> <song> - Add song to playlist
+    if (flag === '-add') {
+      const playlistName = parts[2];
+      const songPath = parts.slice(3).join(' ');
+
+      if (!playlistName || !songPath) {
+        this.output('Usage: playlist -add <playlist> <song>', 'error');
+        return;
+      }
+
+      // Resolve song path
+      const resolvedPath = this.resolveSongPath(songPath);
+      if (!resolvedPath) {
+        this.output(`Song not found: ${songPath}`, 'error');
+        return;
+      }
+
+      const result = this.playlistOrchestrator.addSongToPlaylist(playlistName, resolvedPath);
+      this.output(result.message, result.success ? 'success' : 'error');
+      return;
+    }
+
+    // playlist -list - List all playlists
+    if (flag === '-list') {
+      const playlists = this.playlistOrchestrator.listPlaylists();
+
+      if (playlists.length === 0) {
+        this.output('No playlists found', 'info');
+        this.output('Create one with: playlist -n <name>', 'info');
+        return;
+      }
+
+      this.output(`Found ${playlists.length} playlist(s):`, 'info');
+      this.output('', 'output');
+
+      playlists.forEach(pl => {
+        const selected = pl.isSelected ? ' [SELECTED]' : '';
+        this.output(`  ${pl.name}${selected}`, 'success');
+        this.output(`    Tracks: ${pl.trackCount}`, 'info');
+        this.output(`    Created: ${new Date(pl.created).toLocaleString()}`, 'info');
+      });
+      return;
+    }
+
+    // playlist -show <name> - Show playlist details
+    if (flag === '-show') {
+      const name = parts.slice(2).join(' ');
+      if (!name) {
+        this.output('Usage: playlist -show <name>', 'error');
+        return;
+      }
+
+      const result = this.playlistOrchestrator.showPlaylist(name);
+      if (!result.success) {
+        this.output(result.message, 'error');
+        return;
+      }
+
+      const pl = result.playlist;
+      this.output(`Playlist: ${pl.name}`, 'info');
+      this.output(`Tracks: ${pl.tracks.length}`, 'info');
+      this.output(`Created: ${new Date(pl.created).toLocaleString()}`, 'info');
+      this.output('', 'output');
+
+      if (pl.tracks.length === 0) {
+        this.output('No tracks in playlist', 'info');
+      } else {
+        pl.tracks.forEach((track, index) => {
+          this.output(`[${index + 1}] ${track.title}`, 'success');
+          this.output(`    Path: ${track.path}`, 'info');
+        });
+      }
+      return;
+    }
+
+    // playlist -rm <name> <index> - Remove track from playlist
+    if (flag === '-rm') {
+      const playlistName = parts[2];
+      const trackIndex = parseInt(parts[3]);
+
+      if (!playlistName || isNaN(trackIndex)) {
+        this.output('Usage: playlist -rm <playlist> <track-number>', 'error');
+        return;
+      }
+
+      const result = this.playlistOrchestrator.removeTrackFromPlaylist(playlistName, trackIndex);
+      this.output(result.message, result.success ? 'success' : 'error');
+      return;
+    }
+
+    // playlist -del <name> - Delete playlist
+    if (flag === '-del') {
+      const name = parts.slice(2).join(' ');
+      if (!name) {
+        this.output('Usage: playlist -del <name>', 'error');
+        return;
+      }
+
+      const result = this.playlistOrchestrator.deletePlaylist(name);
+      this.output(result.message, result.success ? 'success' : 'error');
+      return;
+    }
+
+    // playlist <name> - Select playlist
+    const name = parts.slice(1).join(' ');
+    if (!name) {
+      this.output('Usage: playlist <name> or playlist -list', 'error');
+      return;
+    }
+
+    const result = this.playlistOrchestrator.selectPlaylist(name);
+    this.output(result.message, result.success ? 'success' : 'error');
+
+    // Open drawer if playlist selected successfully
+    if (result.success && typeof window !== 'undefined' && window.openPlaylistDrawer) {
+      window.openPlaylistDrawer(name, result.playlist);
+    }
+  }
+
+  handleAdd(command) {
+    if (!this.playlistOrchestrator) {
+      this.output('Error: Playlist system not available', 'error');
+      return;
+    }
+
+    const songPath = command.trim().split(/\s+/).slice(1).join(' ');
+
+    if (!songPath) {
+      this.output('Usage: add <song>', 'error');
+      this.output('Note: You must select a playlist first with "playlist <name>"', 'info');
+      return;
+    }
+
+    // Resolve song path
+    const resolvedPath = this.resolveSongPath(songPath);
+    if (!resolvedPath) {
+      this.output(`Song not found: ${songPath}`, 'error');
+      return;
+    }
+
+    const result = this.playlistOrchestrator.addSongToSelected(resolvedPath);
+    this.output(result.message, result.success ? 'success' : 'error');
+
+    // Update drawer if song was added successfully
+    if (result.success && typeof window !== 'undefined' && window.updateDrawerCurrentTrack) {
+      window.updateDrawerCurrentTrack();
+    }
+  }
+
+  handlePlayPlaylist() {
+    if (!this.playlistOrchestrator) {
+      this.output('Error: Playlist system not available', 'error');
+      return;
+    }
+
+    if (!this.audioPlayer) {
+      this.output('Error: Audio player not available', 'error');
+      return;
+    }
+
+    const playlist = this.playlistOrchestrator.getSelectedPlaylist();
+    if (!playlist) {
+      this.output('No playlist selected', 'error');
+      this.output('Use "playlist <name>" to select a playlist first', 'info');
+      return;
+    }
+
+    if (playlist.tracks.length === 0) {
+      this.output(`Playlist "${playlist.name}" is empty`, 'warning');
+      return;
+    }
+
+    // Start playing the playlist from the beginning
+    const playlistName = this.playlistOrchestrator.getSelectedPlaylistName();
+    const firstTrack = this.playlistOrchestrator.startPlaylist(playlistName);
+
+    if (!firstTrack) {
+      this.output('Error starting playlist', 'error');
+      return;
+    }
+
+    try {
+      this.audioPlayer.src = firstTrack.path;
+      this.audioPlayer.play();
+      this.currentlyPlaying = firstTrack;
+
+      this.output(`Playing playlist: ${playlist.name}`, 'success');
+      this.output(`Now playing: ${firstTrack.title}`, 'success');
+      this.output(`Tracks in queue: ${playlist.tracks.length}`, 'info');
+
+      // Update timeline with song name
+      if (typeof window !== 'undefined' && window.updateTimelineSong) {
+        window.updateTimelineSong(firstTrack.title);
+      }
+
+      // Update drawer to highlight current track
+      if (typeof window !== 'undefined' && window.updateDrawerCurrentTrack) {
+        window.updateDrawerCurrentTrack();
+      }
+    } catch (error) {
+      this.output(`Error playing playlist: ${error.message}`, 'error');
+    }
+  }
+
+  // Helper to resolve song path (by index or filename)
+  resolveSongPath(songIdentifier) {
+    // Check if it's a number (index from list command)
+    const index = parseInt(songIdentifier);
+    if (!isNaN(index) && index > 0 && index <= this.audioFiles.length) {
+      return this.audioFiles[index - 1].path;
+    }
+
+    // Check if it's a direct file path
+    if (this.fs.existsSync(songIdentifier)) {
+      return this.path.resolve(songIdentifier);
+    }
+
+    // Try as relative path from current directory
+    const currentDir = process.cwd();
+    const filePath = this.path.join(currentDir, songIdentifier);
+    if (this.fs.existsSync(filePath)) {
+      return filePath;
+    }
+
+    // Try to find partial match in audioFiles
+    const match = this.audioFiles.find(f =>
+      f.name.toLowerCase().includes(songIdentifier.toLowerCase())
+    );
+
+    if (match) {
+      return match.path;
+    }
+
+    return null;
   }
 }
 

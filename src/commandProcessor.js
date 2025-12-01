@@ -1,12 +1,12 @@
 // CommandHandler is loaded globally via script tag in HTML
 class CommandProcessor {
-  constructor(outputCallback, audioPlayer) {
+  constructor(outputCallback, audioPlayer, playlistOrchestrator) {
     this.outputCallback = outputCallback;
     this.commandHistory = [];
     this.historyIndex = -1;
 
     // Initialize CommandHandler (loaded globally via script tag)
-    this.commandHandler = new window.CommandHandler(outputCallback, audioPlayer);
+    this.commandHandler = new window.CommandHandler(outputCallback, audioPlayer, playlistOrchestrator);
   }
 
   // Add command to history
@@ -80,7 +80,8 @@ class CommandProcessor {
 
       case 'play':
       case 'p':
-        return this.commandHandler.handlePlay(command);
+        // If no arguments, play the selected playlist
+        return this.commandHandler.handlePlayPlaylist();
 
       case 'download':
       case 'dl':
@@ -96,6 +97,10 @@ class CommandProcessor {
           return this.commandHandler.handlePlay(command);
         } else if (cmd.startsWith('download ') || cmd.startsWith('dl ')) {
           return this.commandHandler.handleDownload(command);
+        } else if (cmd.startsWith('playlist ')) {
+          return this.commandHandler.handlePlaylist(command);
+        } else if (cmd.startsWith('add ')) {
+          return this.commandHandler.handleAdd(command);
         } else {
           return this.commandHandler.handleUnknown(command);
         }
