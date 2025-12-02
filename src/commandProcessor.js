@@ -109,6 +109,8 @@ class CommandProcessor {
           return this.commandOrchestrator.handlePause();
         } else if (cmd.startsWith("resume")) {
           return this.commandOrchestrator.handleResume();
+        } else if (cmd.startsWith("volume")) {
+          return this.commandOrchestrator.handleVolume(command);
         } else {
           return this.commandOrchestrator.handleUnknown(command);
         }

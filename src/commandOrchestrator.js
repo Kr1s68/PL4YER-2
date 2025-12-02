@@ -10,26 +10,26 @@ class CommandOrchestrator {
     this.path = require("path");
     this.spawn = require("child_process").spawn;
     this.exec = require("child_process").exec;
-    const printer = new window.PrinterModule(outputCallback);
-    this.helpHandler = new window.HelpHandler(printer);
-    this.metaHandler = new window.MetaHandler(this.fs, this.path, printer);
+    this.printer = new window.PrinterModule(outputCallback);
+    this.helpHandler = new window.HelpHandler(this.printer);
+    this.metaHandler = new window.MetaHandler(this.fs, this.path, this.printer);
     this.songHandler = new window.SongHandler(
       this.fs,
       this.path,
       audioPlayer,
-      printer
+      this.printer
     );
     this.downloadHandler = new window.DownloadHandler(
       this.fs,
       this.path,
-      printer
+      this.printer
     );
     this.playlistHandler = new window.PlaylistHandler(
       this.fs,
       this.path,
       this.playlistOrchestrator,
       this.audioPlayer,
-      printer
+      this.printer
     );
   }
 
@@ -98,6 +98,10 @@ class CommandOrchestrator {
 
   handlePlayPlaylist() {
     return this.playlistHandler.handlePlayPlaylist();
+  }
+
+  handleVolume(command) {
+    return this.songHandler.handleVolume(command);
   }
 }
 

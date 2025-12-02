@@ -137,6 +137,22 @@ class SongHandler {
     this.audioPlayer.play();
     this.printer.print("Playback resumed", "info");
   }
+
+  handleVolume(command) {
+    const parts = command.trim().split(/\s+/);
+    const argument = parts.slice(1).join(" "); // Everything after "volume" or "vol"
+
+    this.audioPlayer.volume = parseFloat(argument) / 100;
+    if (
+      isNaN(this.audioPlayer.volume) ||
+      this.audioPlayer.volume < 0 ||
+      this.audioPlayer.volume > 1
+    ) {
+      this.printer.print("Usage: volume <0-100>", "error");
+      return;
+    }
+    this.printer.print(`Volume set to ${argument}%`, "success");
+  }
 }
 
 if (typeof window !== "undefined") {
