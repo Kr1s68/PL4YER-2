@@ -1,17 +1,98 @@
 {
   "name": "pl4yer-2",
-  "version": "0.0.1",
-  "description": "",
+  "version": "0.1.0",
+  "description": "A minimalist console-based audio player built with Electron",
   "license": "ISC",
-  "author": "",
+  "author": "Kristiyan Boyanov kboyanov19@abv.bg",
   "type": "commonjs",
   "main": "./src/main.js",
   "scripts": {
     "start": "electron .",
+    "build": "electron-builder",
+    "build:win": "electron-builder --win",
+    "build:mac": "electron-builder --mac",
+    "build:linux": "electron-builder --linux",
+    "build:all": "electron-builder -mwl",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "devDependencies": {
-    "electron": "^39.2.3"
+  "build": {
+    "appId": "com.pl4yer.app",
+    "productName": "PL4YER",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "src/**/*",
+      "package.json",
+      "!src/**/*.md"
+    ],
+    "extraResources": [
+      {
+        "from": "data",
+        "to": "data",
+        "filter": [
+          "**/*",
+          "!playlists/**"
+        ]
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "mac": {
+      "target": [
+        "dmg",
+        "zip"
+      ],
+      "category": "public.app-category.music",
+      "icon": "build/icon.icns"
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "deb"
+      ],
+      "category": "Audio",
+      "icon": "build/icon.png"
+    },
+    "dmg": {
+      "contents": [
+        {
+          "x": 130,
+          "y": 220
+        },
+        {
+          "x": 410,
+          "y": 220,
+          "type": "link",
+          "path": "/Applications"
+        }
+      ]
+    }
   },
-  "dependencies": {}
+  "devDependencies": {
+    "electron": "^39.2.3",
+    "electron-builder": "^26.0.12"
+  }
 }

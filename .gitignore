@@ -1,3 +1,11 @@
 songs/
 node_modules/
 data/
+
+# Build output
+dist/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
