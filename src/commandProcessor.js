@@ -6,7 +6,7 @@ class CommandProcessor {
     this.historyIndex = -1;
 
     // Initialize CommandHandler (loaded globally via script tag)
-    this.commandHandler = new window.CommandHandler(
+    this.commandOrchestrator = new window.CommandOrchestrator(
       outputCallback,
       audioPlayer,
       playlistOrchestrator
@@ -65,52 +65,52 @@ class CommandProcessor {
         break;
 
       case "help":
-        return this.commandHandler.handleHelp();
+        return this.commandOrchestrator.handleHelp();
 
       case "clear":
-        return this.commandHandler.handleClear();
+        return this.commandOrchestrator.handleClear();
 
       case "date":
-        return this.commandHandler.handleDate();
+        return this.commandOrchestrator.handleDate();
 
       case "version":
-        return this.commandHandler.handleVersion();
+        return this.commandOrchestrator.handleVersion();
 
       case "list":
-        return this.commandHandler.handleList();
+        return this.commandOrchestrator.handleList();
 
       case "debug":
-        return this.commandHandler.handleDebug();
+        return this.commandOrchestrator.handleDebug();
 
       case "play":
       case "p":
         // If no arguments, play the selected playlist
-        return this.commandHandler.handlePlayPlaylist();
+        return this.commandOrchestrator.handlePlayPlaylist();
 
       case "download":
       case "dl":
-        return this.commandHandler.handleDownload(command);
+        return this.commandOrchestrator.handleDownload(command);
 
       default:
         // Handle commands with parameters
         if (cmd.startsWith("echo ")) {
-          return this.commandHandler.handleEcho(command);
+          return this.commandOrchestrator.handleEcho(command);
         } else if (cmd.startsWith("calc ")) {
-          return this.commandHandler.handleCalculator(command);
+          return this.commandOrchestrator.handleCalculator(command);
         } else if (cmd.startsWith("play ") || cmd.startsWith("p ")) {
-          return this.commandHandler.handlePlay(command);
+          return this.commandOrchestrator.handlePlay(command);
         } else if (cmd.startsWith("download ") || cmd.startsWith("dl ")) {
-          return this.commandHandler.handleDownload(command);
+          return this.commandOrchestrator.handleDownload(command);
         } else if (cmd.startsWith("playlist ")) {
-          return this.commandHandler.handlePlaylist(command);
+          return this.commandOrchestrator.handlePlaylist(command);
         } else if (cmd.startsWith("add ")) {
-          return this.commandHandler.handleAdd(command);
+          return this.commandOrchestrator.handleAdd(command);
         } else if (cmd.startsWith("pause")) {
-          return this.commandHandler.handlePause();
+          return this.commandOrchestrator.handlePause();
         } else if (cmd.startsWith("resume")) {
-          return this.commandHandler.handleResume();
+          return this.commandOrchestrator.handleResume();
         } else {
-          return this.commandHandler.handleUnknown(command);
+          return this.commandOrchestrator.handleUnknown(command);
         }
     }
   }
