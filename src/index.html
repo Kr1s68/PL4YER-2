@@ -19,11 +19,17 @@
  ██║     ███████╗     ██║   ██║   ███████╗██║  ██║
  ╚═╝     ╚══════╝     ╚═╝   ╚═╝   ╚══════╝╚═╝  ╚═╝
       </pre>
-      <div class="ascii-subtitle">» Local Audio Console Player - Type 'help' to begin</div>
+      <div class="ascii-subtitle">
+        » Local Audio Console Player - Type 'help' to begin
+      </div>
     </div>
 
     <!-- Audio timeline (below banner) -->
-    <div class="timeline-container" id="timelineContainer" style="display: none;">
+    <div
+      class="timeline-container"
+      id="timelineContainer"
+      style="display: none"
+    >
       <div class="timeline-info">
         <span class="timeline-song" id="timelineSong">No song playing</span>
         <span class="timeline-time">
@@ -62,29 +68,34 @@
     </div>
 
     <!-- Hidden audio player -->
-    <audio id="audioPlayer" style="display: none;"></audio>
-
+    <audio id="audioPlayer" style="display: none"></audio>
+    <script src="handlers/HelpHandler.js"></script>
     <script src="PlaylistOrchestrator.js"></script>
-    <script src="commandHandler.js"></script>
+    <script src="commandOrchestrator.js"></script>
     <script src="commandProcessor.js"></script>
+    <script src="PrinterModule.js"></script>
+    <script src="handlers/MetaHandler.js"></script>
+    <script src="handlers/SongHandler.js"></script>
+    <script src="handlers/DownloadHandler.js"></script>
+    <script src="handlers/PlaylistHandler.js"></script>
     <script>
       // Console functionality
-      const consoleOutput = document.getElementById('consoleOutput');
-      const consoleInput = document.getElementById('consoleInput');
-      const clearBtn = document.getElementById('clearBtn');
-      const audioPlayer = document.getElementById('audioPlayer');
+      const consoleOutput = document.getElementById("consoleOutput");
+      const consoleInput = document.getElementById("consoleInput");
+      const clearBtn = document.getElementById("clearBtn");
+      const audioPlayer = document.getElementById("audioPlayer");
 
       // Timeline elements
-      const timelineContainer = document.getElementById('timelineContainer');
-      const timelineSong = document.getElementById('timelineSong');
-      const currentTimeEl = document.getElementById('currentTime');
-      const totalTimeEl = document.getElementById('totalTime');
-      const timelineProgress = document.getElementById('timelineProgress');
-      const timelineBar = document.querySelector('.timeline-bar');
+      const timelineContainer = document.getElementById("timelineContainer");
+      const timelineSong = document.getElementById("timelineSong");
+      const currentTimeEl = document.getElementById("currentTime");
+      const totalTimeEl = document.getElementById("totalTime");
+      const timelineProgress = document.getElementById("timelineProgress");
+      const timelineBar = document.querySelector(".timeline-bar");
 
       // Add line to console
-      function addLine(text, type = 'output') {
-        const line = document.createElement('div');
+      function addLine(text, type = "output") {
+        const line = document.createElement("div");
         line.className = `console-line ${type}`;
         line.textContent = text;
         consoleOutput.appendChild(line);
@@ -95,27 +106,31 @@
       const playlistOrchestrator = new window.PlaylistOrchestrator();
 
       // Initialize CommandProcessor with output callback, audio player, and playlist orchestrator
-      const commandProcessor = new CommandProcessor(addLine, audioPlayer, playlistOrchestrator);
+      const commandProcessor = new CommandProcessor(
+        addLine,
+        audioPlayer,
+        playlistOrchestrator
+      );
 
       // Handle input
-      consoleInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+      consoleInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
           const command = consoleInput.value;
           const result = commandProcessor.processCommand(command);
 
           // Handle special actions like clear
-          if (result && result.action === 'clear') {
-            consoleOutput.innerHTML = '';
+          if (result && result.action === "clear") {
+            consoleOutput.innerHTML = "";
           }
 
-          consoleInput.value = '';
-        } else if (e.key === 'ArrowUp') {
+          consoleInput.value = "";
+        } else if (e.key === "ArrowUp") {
           e.preventDefault();
           const prevCommand = commandProcessor.getPreviousCommand();
           if (prevCommand !== null) {
             consoleInput.value = prevCommand;
           }
-        } else if (e.key === 'ArrowDown') {
+        } else if (e.key === "ArrowDown") {
           e.preventDefault();
           const nextCommand = commandProcessor.getNextCommand();
           consoleInput.value = nextCommand;
@@ -123,30 +138,30 @@
       });
 
       // Clear button
-      clearBtn.addEventListener('click', () => {
-        consoleOutput.innerHTML = '';
-        addLine('Console cleared', 'info');
+      clearBtn.addEventListener("click", () => {
+        consoleOutput.innerHTML = "";
+        addLine("Console cleared", "info");
       });
 
       // Focus input on load
-      window.addEventListener('load', () => {
+      window.addEventListener("load", () => {
         consoleInput.focus();
       });
 
       // Format time in mm:ss
       function formatTime(seconds) {
-        if (isNaN(seconds)) return '0:00';
+        if (isNaN(seconds)) return "0:00";
         const mins = Math.floor(seconds / 60);
         const secs = Math.floor(seconds % 60);
-        return `${mins}:${secs.toString().padStart(2, '0')}`;
+        return `${mins}:${secs.toString().padStart(2, "0")}`;
       }
 
       // Audio player event listeners
-      audioPlayer.addEventListener('loadedmetadata', () => {
+      audioPlayer.addEventListener("loadedmetadata", () => {
         totalTimeEl.textContent = formatTime(audioPlayer.duration);
       });
 
-      audioPlayer.addEventListener('timeupdate', () => {
+      audioPlayer.addEventListener("timeupdate", () => {
         const currentTime = audioPlayer.currentTime;
         const duration = audioPlayer.duration;
 
@@ -154,21 +169,21 @@
 
         if (duration > 0) {
           const progress = (currentTime / duration) * 100;
-          timelineProgress.style.width = progress + '%';
+          timelineProgress.style.width = progress + "%";
         }
       });
 
-      audioPlayer.addEventListener('play', () => {
-        timelineContainer.style.display = 'block';
+      audioPlayer.addEventListener("play", () => {
+        timelineContainer.style.display = "block";
       });
 
-      audioPlayer.addEventListener('pause', () => {
+      audioPlayer.addEventListener("pause", () => {
         // Keep timeline visible when paused
       });
 
-      audioPlayer.addEventListener('ended', () => {
-        timelineProgress.style.width = '0%';
-        currentTimeEl.textContent = '0:00';
+      audioPlayer.addEventListener("ended", () => {
+        timelineProgress.style.width = "0%";
+        currentTimeEl.textContent = "0:00";
 
         // Auto-advance to next track in playlist
         const nextTrack = playlistOrchestrator.getNextTrack();
@@ -177,10 +192,10 @@
             audioPlayer.src = nextTrack.path;
             audioPlayer.play();
 
-            addLine(`Now playing: ${nextTrack.title}`, 'success');
+            addLine(`Now playing: ${nextTrack.title}`, "success");
             const remaining = playlistOrchestrator.getRemainingTracksCount();
             if (remaining > 0) {
-              addLine(`${remaining} track(s) remaining in playlist`, 'info');
+              addLine(`${remaining} track(s) remaining in playlist`, "info");
             }
 
             // Update timeline with song name
@@ -189,17 +204,17 @@
             // Update drawer to highlight current track
             window.updateDrawerCurrentTrack();
           } catch (error) {
-            addLine(`Error playing next track: ${error.message}`, 'error');
+            addLine(`Error playing next track: ${error.message}`, "error");
           }
         } else {
           // Playlist finished
-          addLine('Playlist finished', 'info');
-          timelineSong.textContent = 'No song playing';
+          addLine("Playlist finished", "info");
+          timelineSong.textContent = "No song playing";
         }
       });
 
       // Click on timeline to seek
-      timelineBar.addEventListener('click', (e) => {
+      timelineBar.addEventListener("click", (e) => {
         const rect = timelineBar.getBoundingClientRect();
         const clickX = e.clientX - rect.left;
         const percentage = clickX / rect.width;
@@ -216,21 +231,21 @@
       };
 
       // Playlist drawer functionality
-      const playlistDrawer = document.getElementById('playlistDrawer');
-      const drawerTitle = document.getElementById('drawerTitle');
-      const drawerContent = document.getElementById('drawerContent');
-      const drawerClose = document.getElementById('drawerClose');
+      const playlistDrawer = document.getElementById("playlistDrawer");
+      const drawerTitle = document.getElementById("drawerTitle");
+      const drawerContent = document.getElementById("drawerContent");
+      const drawerClose = document.getElementById("drawerClose");
 
       // Open drawer with playlist
       window.openPlaylistDrawer = (playlistName, playlist) => {
         drawerTitle.textContent = `> ${playlistName}`;
         updateDrawerContent(playlist);
-        playlistDrawer.classList.add('open');
+        playlistDrawer.classList.add("open");
       };
 
       // Close drawer
       window.closePlaylistDrawer = () => {
-        playlistDrawer.classList.remove('open');
+        playlistDrawer.classList.remove("open");
       };
 
       // Update drawer content with playlist tracks
@@ -242,13 +257,17 @@
 
         const currentTrackIndex = playlistOrchestrator.currentTrackIndex;
 
-        let html = '';
+        let html = "";
         playlist.tracks.forEach((track, index) => {
           const isCurrent = index === currentTrackIndex;
-          const currentClass = isCurrent ? ' current' : '';
-          const indicator = isCurrent ? '>' : ' ';
+          const currentClass = isCurrent ? " current" : "";
+          const indicator = isCurrent ? ">" : " ";
 
-          html += `<div class="drawer-track${currentClass}" data-track-index="${index}"><span class="track-number">${indicator} ${String(index + 1).padStart(2, '0')}</span><span class="track-title">${track.title}</span></div>`;
+          html += `<div class="drawer-track${currentClass}" data-track-index="${index}"><span class="track-number">${indicator} ${String(
+            index + 1
+          ).padStart(2, "0")}</span><span class="track-title">${
+            track.title
+          }</span></div>`;
         });
 
         // Add stats footer
@@ -259,9 +278,14 @@
         // Scroll current track into view
         if (currentTrackIndex >= 0) {
           setTimeout(() => {
-            const currentTrackEl = drawerContent.querySelector('.drawer-track.current');
+            const currentTrackEl = drawerContent.querySelector(
+              ".drawer-track.current"
+            );
             if (currentTrackEl) {
-              currentTrackEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              currentTrackEl.scrollIntoView({
+                behavior: "smooth",
+                block: "center",
+              });
             }
           }, 100);
         }
@@ -270,24 +294,28 @@
       // Update drawer to highlight current track
       window.updateDrawerCurrentTrack = () => {
         const playlist = playlistOrchestrator.getSelectedPlaylist();
-        if (playlist && playlistDrawer.classList.contains('open')) {
+        if (playlist && playlistDrawer.classList.contains("open")) {
           updateDrawerContent(playlist);
         }
       };
 
       // Close drawer button
-      drawerClose.addEventListener('click', () => {
+      drawerClose.addEventListener("click", () => {
         window.closePlaylistDrawer();
       });
 
       // Click outside drawer to close (optional)
-      document.addEventListener('click', (e) => {
-        if (playlistDrawer.classList.contains('open') &&
-            !playlistDrawer.contains(e.target) &&
-            e.target !== playlistDrawer) {
+      document.addEventListener("click", (e) => {
+        if (
+          playlistDrawer.classList.contains("open") &&
+          !playlistDrawer.contains(e.target) &&
+          e.target !== playlistDrawer
+        ) {
           // Don't close if clicking in console
-          if (!e.target.closest('.console-container') &&
-              !e.target.closest('.console-input-container')) {
+          if (
+            !e.target.closest(".console-container") &&
+            !e.target.closest(".console-input-container")
+          ) {
             // Only if clicking outside main areas
           }
         }
