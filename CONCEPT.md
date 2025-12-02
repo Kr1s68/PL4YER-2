@@ -69,20 +69,28 @@ Create a minimalist yet powerful audio player that allows users to manage and pl
 ```
 PL4YER-2/
 ├── src/
-│   ├── index.html           # Main UI
-│   ├── styles.css           # Application styles
-│   ├── main.js              # Electron main process
-│   ├── preload.js           # Electron preload script
-│   ├── commandProcessor.js  # Command handling
-│   ├── audioPlayer.js       # Audio playback engine (to be created)
-│   ├── fileManager.js       # File system operations (to be created)
-│   ├── playlistManager.js   # Playlist operations (to be created)
-│   └── queueManager.js      # Queue operations (to be created)
+│   ├── index.html              # Main UI
+│   ├── styles.css              # Application styles
+│   ├── main.js                 # Electron main process
+│   ├── preload.js              # Electron preload script
+│   ├── commandProcessor.js     # Command parsing and routing
+│   ├── commandOrchestrator.js  # Command orchestration
+│   ├── PrinterModule.js        # Console output handling
+│   ├── handlers/               # Command handler modules
+│   │   ├── HelpHandler.js      # Help command handler
+│   │   ├── MetaHandler.js      # Meta commands (date, version, debug, etc.)
+│   │   ├── SongHandler.js      # Song playback handlers
+│   │   ├── DownloadHandler.js  # YouTube download handler
+│   │   └── PlaylistHandler.js  # Playlist command handler
+│   ├── audioPlayer.js          # Audio playback engine (to be created)
+│   ├── fileManager.js          # File system operations (to be created)
+│   ├── playlistManager.js      # Playlist operations (to be created)
+│   └── queueManager.js         # Queue operations (to be created)
 ├── data/
-│   ├── playlists/           # Saved playlists (JSON)
-│   ├── queues/              # Saved queues (JSON)
-│   └── config.json          # User settings
-└── CONCEPT.md               # This file
+│   ├── playlists/              # Saved playlists (JSON)
+│   ├── queues/                 # Saved queues (JSON)
+│   └── config.json             # User settings
+└── CONCEPT.md                  # This file
 ```
 
 ### Component Design
@@ -120,9 +128,29 @@ Manages playback queue:
 #### CommandProcessor
 Processes user commands (already implemented):
 - Parse command input
-- Route to appropriate handler
+- Route to CommandOrchestrator
 - Return formatted output
 - Maintain command history
+
+#### CommandOrchestrator
+Orchestrates command execution (already implemented):
+- Delegates commands to specialized handlers
+- Manages audio player and playlist integration
+- Provides unified interface for command execution
+
+#### Handler Modules
+Specialized command handlers for better code organization:
+- **HelpHandler**: Displays help information and command documentation
+- **MetaHandler**: Handles meta commands (date, version, debug, clear, echo, calc)
+- **SongHandler**: Manages audio playback commands (play, pause, resume, list)
+- **DownloadHandler**: Handles YouTube downloads via yt-dlp
+- **PlaylistHandler**: Manages all playlist operations
+
+#### PrinterModule
+Centralized console output management:
+- Consistent output formatting
+- Colored output for different message types
+- Unified output interface for all handlers
 
 ## Command Interface
 

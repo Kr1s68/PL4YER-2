@@ -197,7 +197,14 @@ PL4YER-2/
 │   ├── main.js                 # Electron main process
 │   ├── preload.js              # Electron preload script
 │   ├── commandProcessor.js     # Command parsing & routing
-│   ├── commandHandler.js       # Command implementation
+│   ├── commandOrchestrator.js  # Command orchestration
+│   ├── PrinterModule.js        # Console output handling
+│   ├── handlers/               # Command handler modules
+│   │   ├── HelpHandler.js      # Help command handler
+│   │   ├── MetaHandler.js      # Meta commands handler
+│   │   ├── SongHandler.js      # Song playback handler
+│   │   ├── DownloadHandler.js  # YouTube download handler
+│   │   └── PlaylistHandler.js  # Playlist command handler
 │   └── PlaylistOrchestrator.js # Playlist management system
 ├── data/
 │   └── playlists/              # Stored playlists (JSON files)
@@ -219,14 +226,27 @@ PL4YER-2/
 #### CommandProcessor
 - Parses user input
 - Maintains command history
-- Routes commands to appropriate handlers
+- Routes commands to CommandOrchestrator
 - Supports arrow key navigation
 
-#### CommandHandler
-- Implements all command functionality
-- Manages audio playback
-- Handles file system operations
-- Integrates with yt-dlp for downloads
+#### CommandOrchestrator
+- Orchestrates command execution
+- Delegates to specialized handler modules
+- Manages audio player and playlist integration
+- Provides unified command interface
+
+#### Handler Modules
+Specialized handlers for improved code organization:
+- **HelpHandler**: Command documentation and help system
+- **MetaHandler**: Meta commands (date, version, debug, clear, echo, calc)
+- **SongHandler**: Audio playback operations (play, pause, resume, list)
+- **DownloadHandler**: YouTube download integration via yt-dlp
+- **PlaylistHandler**: Complete playlist management functionality
+
+#### PrinterModule
+- Centralized console output management
+- Consistent formatting across all handlers
+- Colored output for different message types (success, error, info)
 
 #### PlaylistOrchestrator
 - Creates and manages playlists
@@ -274,9 +294,10 @@ npm start
 
 ### Adding New Commands
 
-1. Add command handler in [commandHandler.js](src/commandHandler.js)
-2. Add command routing in [commandProcessor.js](src/commandProcessor.js)
-3. Update help text in `handleHelp()` method
+1. Create a new handler in the [handlers/](src/handlers/) directory or add to an existing handler
+2. Register the handler method in [commandOrchestrator.js](src/commandOrchestrator.js)
+3. Add command routing in [commandProcessor.js](src/commandProcessor.js)
+4. Update help text in [HelpHandler.js](src/handlers/HelpHandler.js)
 
 ### Modifying UI
 
