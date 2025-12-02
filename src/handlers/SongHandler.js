@@ -10,7 +10,14 @@ class SongHandler {
   handleList() {
     try {
       const currentDir = process.cwd();
-      const files = this.fs.readdirSync(currentDir);
+      const songsDir = this.path.join(currentDir, "songs");
+
+      // Ensure songs directory exists
+      if (!this.fs.existsSync(songsDir)) {
+        this.fs.mkdirSync(songsDir, { recursive: true });
+      }
+
+      const files = this.fs.readdirSync(songsDir);
 
       // Filter for audio files (mp3, wav, ogg, flac, m4a)
       const audioExtensions = [".mp3", ".wav", ".ogg", ".flac", ".m4a"];
@@ -22,24 +29,25 @@ class SongHandler {
       // Store audio files with full paths for playing
       this.audioFiles = audioFiles.map((file) => ({
         name: file,
-        path: this.path.join(currentDir, file),
+        path: this.path.join(songsDir, file),
       }));
 
       if (audioFiles.length === 0) {
         this.printer.print(
-          "No audio files found in current directory",
+          "No audio files found in songs directory",
           "warning"
         );
-        this.printer.print(`Directory: ${currentDir}`, "info");
+        this.printer.print(`Directory: ${songsDir}`, "info");
+        this.printer.print('Use "download <url>" to add songs', "info");
       } else {
         this.printer.print(
-          `Found ${audioFiles.length} audio file(s) in: ${currentDir}`,
+          `Found ${audioFiles.length} audio file(s) in: songs/`,
           "info"
         );
         this.printer.print("", "output");
 
         audioFiles.forEach((file, index) => {
-          const filePath = this.path.join(currentDir, file);
+          const filePath = this.path.join(songsDir, file);
           const stats = this.fs.statSync(filePath);
           const fileSize = (stats.size / (1024 * 1024)).toFixed(2);
           this.printer.print(

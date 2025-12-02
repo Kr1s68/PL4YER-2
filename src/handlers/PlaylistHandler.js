@@ -15,6 +15,34 @@ class PlaylistHandler {
     // Load audio files for path resolution
     this.audioFiles = [];
     this.currentlyPlaying = null;
+    this.loadAudioFiles();
+  }
+
+  // Load audio files from songs directory
+  loadAudioFiles() {
+    try {
+      const currentDir = process.cwd();
+      const songsDir = this.path.join(currentDir, "songs");
+
+      // Ensure songs directory exists
+      if (!this.fs.existsSync(songsDir)) {
+        return;
+      }
+
+      const files = this.fs.readdirSync(songsDir);
+      const audioExtensions = [".mp3", ".wav", ".ogg", ".flac", ".m4a"];
+      const audioFiles = files.filter((file) => {
+        const ext = this.path.extname(file).toLowerCase();
+        return audioExtensions.includes(ext);
+      });
+
+      this.audioFiles = audioFiles.map((file) => ({
+        name: file,
+        path: this.path.join(songsDir, file),
+      }));
+    } catch (error) {
+      console.error("Error loading audio files:", error);
+    }
   }
 
   // Playlist command handlers
@@ -50,10 +78,14 @@ class PlaylistHandler {
         return;
       }
 
+      // Reload audio files to ensure we have the latest from songs directory
+      this.loadAudioFiles();
+
       // Resolve song path
       const resolvedPath = this.resolveSongPath(songPath);
       if (!resolvedPath) {
         this.printer.print(`Song not found: ${songPath}`, "error");
+        this.printer.print('Tip: Use "list" to see available songs', "info");
         return;
       }
 
@@ -195,10 +227,14 @@ class PlaylistHandler {
       return;
     }
 
+    // Reload audio files to ensure we have the latest from songs directory
+    this.loadAudioFiles();
+
     // Resolve song path
     const resolvedPath = this.resolveSongPath(songPath);
     if (!resolvedPath) {
       this.printer.print(`Song not found: ${songPath}`, "error");
+      this.printer.print('Tip: Use "list" to see available songs', "info");
       return;
     }
 
@@ -286,11 +322,18 @@ class PlaylistHandler {
       return this.path.resolve(songIdentifier);
     }
 
-    // Try as relative path from current directory
+    // Try as relative path from songs directory
     const currentDir = process.cwd();
-    const filePath = this.path.join(currentDir, songIdentifier);
+    const songsDir = this.path.join(currentDir, "songs");
+    const filePath = this.path.join(songsDir, songIdentifier);
     if (this.fs.existsSync(filePath)) {
       return filePath;
+    }
+
+    // Try as relative path from current directory
+    const filePathCurrent = this.path.join(currentDir, songIdentifier);
+    if (this.fs.existsSync(filePathCurrent)) {
+      return filePathCurrent;
     }
 
     // Try to find partial match in audioFiles

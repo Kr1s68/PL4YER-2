@@ -58,6 +58,13 @@ class DownloadHandler {
 
       // Build yt-dlp command
       const currentDir = process.cwd();
+      const songsDir = this.path.join(currentDir, "songs");
+
+      // Ensure songs directory exists
+      if (!this.fs.existsSync(songsDir)) {
+        this.fs.mkdirSync(songsDir, { recursive: true });
+      }
+
       const outputTemplate = customFilename
         ? customFilename.replace(/\.mp3$/i, "") + ".%(ext)s"
         : "%(title)s.%(ext)s";
@@ -78,7 +85,7 @@ class DownloadHandler {
 
       // Spawn yt-dlp process
       const ytdlp = this.spawn("yt-dlp", args, {
-        cwd: currentDir,
+        cwd: songsDir,
         shell: true,
       });
 
@@ -136,6 +143,7 @@ class DownloadHandler {
       ytdlp.on("close", (code) => {
         if (code === 0) {
           this.printer.print("✓ Download complete!", "success");
+          this.printer.print("Saved to: songs/", "info");
           this.printer.print('Use "list" to see it in your library', "info");
         } else {
           this.printer.print(`Download failed with code ${code}`, "error");
