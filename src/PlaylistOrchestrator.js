@@ -291,10 +291,31 @@ class PlaylistOrchestrator {
     // Move to next track
     this.currentTrackIndex++;
 
-    // Check if we've reached the end
+    // Loop back to beginning if we've reached the end
     if (this.currentTrackIndex >= playlist.tracks.length) {
-      this.currentTrackIndex = -1; // Reset
-      return null; // No more tracks
+      this.currentTrackIndex = 0;
+    }
+
+    return playlist.tracks[this.currentTrackIndex];
+  }
+
+  // Get previous track in currently selected playlist
+  getPreviousTrack() {
+    if (!this.selectedPlaylist) {
+      return null;
+    }
+
+    const playlist = this.playlists.get(this.selectedPlaylist);
+    if (!playlist || playlist.tracks.length === 0) {
+      return null;
+    }
+
+    // Move to previous track
+    this.currentTrackIndex--;
+
+    // Loop to end if we've gone before the beginning
+    if (this.currentTrackIndex < 0) {
+      this.currentTrackIndex = playlist.tracks.length - 1;
     }
 
     return playlist.tracks[this.currentTrackIndex];

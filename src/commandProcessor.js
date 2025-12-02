@@ -91,6 +91,14 @@ class CommandProcessor {
       case "dl":
         return this.commandOrchestrator.handleDownload(command);
 
+      case "next":
+      case "n":
+        return this.commandOrchestrator.handleNext();
+
+      case "previous":
+      case "prev":
+        return this.commandOrchestrator.handlePrevious();
+
       default:
         // Handle commands with parameters
         if (cmd.startsWith("echo ")) {

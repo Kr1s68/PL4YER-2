@@ -304,6 +304,117 @@ class PlaylistHandler {
 
     return null;
   }
+
+  // Handle next track in playlist
+  handleNext() {
+    if (!this.playlistOrchestrator) {
+      this.printer.print("Error: Playlist system not available", "error");
+      return;
+    }
+
+    if (!this.audioPlayer) {
+      this.printer.print("Error: Audio player not available", "error");
+      return;
+    }
+
+    const playlist = this.playlistOrchestrator.getSelectedPlaylist();
+    if (!playlist) {
+      this.printer.print("No playlist selected", "error");
+      this.printer.print(
+        'Use "playlist <name>" to select a playlist first',
+        "info"
+      );
+      return;
+    }
+
+    if (playlist.tracks.length === 0) {
+      this.printer.print(`Playlist "${playlist.name}" is empty`, "warning");
+      return;
+    }
+
+    const nextTrack = this.playlistOrchestrator.getNextTrack();
+    if (!nextTrack) {
+      this.printer.print("Error getting next track", "error");
+      return;
+    }
+
+    try {
+      this.audioPlayer.src = nextTrack.path;
+      this.audioPlayer.play();
+      this.currentlyPlaying = nextTrack;
+
+      this.printer.print(`Next: ${nextTrack.title}`, "success");
+
+      // Update timeline with song name
+      if (typeof window !== "undefined" && window.updateTimelineSong) {
+        window.updateTimelineSong(nextTrack.title);
+      }
+
+      // Update drawer to highlight current track
+      if (typeof window !== "undefined" && window.updateDrawerCurrentTrack) {
+        window.updateDrawerCurrentTrack();
+      }
+    } catch (error) {
+      this.printer.print(`Error playing next track: ${error.message}`, "error");
+    }
+  }
+
+  // Handle previous track in playlist
+  handlePrevious() {
+    if (!this.playlistOrchestrator) {
+      this.printer.print("Error: Playlist system not available", "error");
+      return;
+    }
+
+    if (!this.audioPlayer) {
+      this.printer.print("Error: Audio player not available", "error");
+      return;
+    }
+
+    const playlist = this.playlistOrchestrator.getSelectedPlaylist();
+    if (!playlist) {
+      this.printer.print("No playlist selected", "error");
+      this.printer.print(
+        'Use "playlist <name>" to select a playlist first',
+        "info"
+      );
+      return;
+    }
+
+    if (playlist.tracks.length === 0) {
+      this.printer.print(`Playlist "${playlist.name}" is empty`, "warning");
+      return;
+    }
+
+    const previousTrack = this.playlistOrchestrator.getPreviousTrack();
+    if (!previousTrack) {
+      this.printer.print("Error getting previous track", "error");
+      return;
+    }
+
+    try {
+      this.audioPlayer.src = previousTrack.path;
+      this.audioPlayer.play();
+      this.currentlyPlaying = previousTrack;
+
+      this.printer.print(`Previous: ${previousTrack.title}`, "success");
+
+      // Update timeline with song name
+      if (typeof window !== "undefined" && window.updateTimelineSong) {
+        window.updateTimelineSong(previousTrack.title);
+      }
+
+      // Update drawer to highlight current track
+      if (typeof window !== "undefined" && window.updateDrawerCurrentTrack) {
+        window.updateDrawerCurrentTrack();
+      }
+    } catch (error) {
+      this.printer.print(
+        `Error playing previous track: ${error.message}`,
+        "error"
+      );
+    }
+  }
 }
 
 if (typeof window !== "undefined") {

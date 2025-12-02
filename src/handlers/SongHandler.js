@@ -153,6 +153,70 @@ class SongHandler {
     }
     this.printer.print(`Volume set to ${argument}%`, "success");
   }
+
+  handleNext() {
+    if (!this.audioPlayer) {
+      this.printer.print("Error: Audio player not available", "error");
+      return;
+    }
+
+    if (this.audioFiles.length === 0) {
+      this.printer.print("No audio files available", "warning");
+      this.printer.print('Use "list" to load audio files first', "info");
+      return;
+    }
+
+    // Randomly select a track
+    const randomIndex = Math.floor(Math.random() * this.audioFiles.length);
+    const randomTrack = this.audioFiles[randomIndex];
+
+    try {
+      this.audioPlayer.src = randomTrack.path;
+      this.audioPlayer.play();
+      this.currentlyPlaying = randomTrack;
+
+      this.printer.print(`Next (random): ${randomTrack.name}`, "success");
+
+      // Update timeline with song name
+      if (typeof window !== "undefined" && window.updateTimelineSong) {
+        window.updateTimelineSong(randomTrack.name);
+      }
+    } catch (error) {
+      this.printer.print(`Error playing track: ${error.message}`, "error");
+    }
+  }
+
+  handlePrevious() {
+    if (!this.audioPlayer) {
+      this.printer.print("Error: Audio player not available", "error");
+      return;
+    }
+
+    if (this.audioFiles.length === 0) {
+      this.printer.print("No audio files available", "warning");
+      this.printer.print('Use "list" to load audio files first', "info");
+      return;
+    }
+
+    // Randomly select a track (same as next in random mode)
+    const randomIndex = Math.floor(Math.random() * this.audioFiles.length);
+    const randomTrack = this.audioFiles[randomIndex];
+
+    try {
+      this.audioPlayer.src = randomTrack.path;
+      this.audioPlayer.play();
+      this.currentlyPlaying = randomTrack;
+
+      this.printer.print(`Previous (random): ${randomTrack.name}`, "success");
+
+      // Update timeline with song name
+      if (typeof window !== "undefined" && window.updateTimelineSong) {
+        window.updateTimelineSong(randomTrack.name);
+      }
+    } catch (error) {
+      this.printer.print(`Error playing track: ${error.message}`, "error");
+    }
+  }
 }
 
 if (typeof window !== "undefined") {

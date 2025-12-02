@@ -103,6 +103,28 @@ class CommandOrchestrator {
   handleVolume(command) {
     return this.songHandler.handleVolume(command);
   }
+
+  handleNext() {
+    // Check if a playlist is selected/active
+    if (this.playlistOrchestrator && this.playlistOrchestrator.getSelectedPlaylist()) {
+      // Route to playlist handler if playlist is active
+      return this.playlistHandler.handleNext();
+    } else {
+      // Route to song handler for random selection
+      return this.songHandler.handleNext();
+    }
+  }
+
+  handlePrevious() {
+    // Check if a playlist is selected/active
+    if (this.playlistOrchestrator && this.playlistOrchestrator.getSelectedPlaylist()) {
+      // Route to playlist handler if playlist is active
+      return this.playlistHandler.handlePrevious();
+    } else {
+      // Route to song handler for random selection
+      return this.songHandler.handlePrevious();
+    }
+  }
 }
 
 // Make CommandHandler available globally for browser context
