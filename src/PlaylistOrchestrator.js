@@ -7,12 +7,17 @@ class PlaylistOrchestrator {
     this.selectedPlaylist = null; // Currently selected playlist name
     this.playlists = new Map(); // In-memory cache of playlists
     this.currentTrackIndex = -1; // Current playing track index in selected playlist
+    this.shuffleEnabled = false; // Global shuffle state
 
     // Data directory
     this.dataDir = this.path.join(process.cwd(), 'data', 'playlists');
+    this.configFile = this.path.join(process.cwd(), 'data', 'config.json');
 
     // Ensure data directory exists
     this.ensureDataDirectory();
+
+    // Load configuration (including shuffle state)
+    this.loadConfig();
 
     // Load existing playlists
     this.loadAllPlaylists();
@@ -21,6 +26,10 @@ class PlaylistOrchestrator {
   // Ensure data directory exists
   ensureDataDirectory() {
     try {
+      const dataRootDir = this.path.join(process.cwd(), 'data');
+      if (!this.fs.existsSync(dataRootDir)) {
+        this.fs.mkdirSync(dataRootDir, { recursive: true });
+      }
       if (!this.fs.existsSync(this.dataDir)) {
         this.fs.mkdirSync(this.dataDir, { recursive: true });
       }
@@ -89,6 +98,8 @@ class PlaylistOrchestrator {
       description: '',
       created: new Date().toISOString(),
       modified: new Date().toISOString(),
+      shuffled: false,
+      originalTrackOrder: [],
       tracks: []
     };
 
@@ -352,6 +363,197 @@ class PlaylistOrchestrator {
     }
 
     return playlist.tracks.length - this.currentTrackIndex - 1;
+  }
+
+  // ========== Configuration Management ==========
+
+  // Load configuration from disk
+  loadConfig() {
+    try {
+      if (this.fs.existsSync(this.configFile)) {
+        const data = this.fs.readFileSync(this.configFile, 'utf8');
+        const config = JSON.parse(data);
+        this.shuffleEnabled = config.shuffleEnabled || false;
+      } else {
+        // Create default config if it doesn't exist
+        this.saveConfig();
+      }
+    } catch (error) {
+      console.error('Error loading config:', error);
+      this.shuffleEnabled = false;
+    }
+  }
+
+  // Save configuration to disk
+  saveConfig() {
+    try {
+      const config = {
+        shuffleEnabled: this.shuffleEnabled
+      };
+      this.fs.writeFileSync(this.configFile, JSON.stringify(config, null, 2), 'utf8');
+      return true;
+    } catch (error) {
+      console.error('Error saving config:', error);
+      return false;
+    }
+  }
+
+  // ========== Shuffle Functionality ==========
+
+  // Get current shuffle state
+  getShuffleState() {
+    return this.shuffleEnabled;
+  }
+
+  // Enable shuffle mode globally
+  enableShuffle() {
+    this.shuffleEnabled = true;
+    this.saveConfig();
+
+    // If a playlist is currently selected, shuffle it
+    if (this.selectedPlaylist) {
+      const currentTrack = this.getCurrentTrack();
+      const result = this.shufflePlaylist(this.selectedPlaylist, currentTrack);
+
+      if (result.success) {
+        return {
+          success: true,
+          shuffledPlaylist: this.selectedPlaylist,
+          trackCount: result.trackCount
+        };
+      }
+    }
+
+    return { success: true };
+  }
+
+  // Disable shuffle mode globally
+  disableShuffle() {
+    this.shuffleEnabled = false;
+    this.saveConfig();
+
+    let restoredCount = 0;
+
+    // Restore original order for all shuffled playlists
+    this.playlists.forEach((playlist, name) => {
+      if (playlist.shuffled) {
+        this.unshufflePlaylist(name);
+        restoredCount++;
+      }
+    });
+
+    return {
+      success: true,
+      restoredCount: restoredCount
+    };
+  }
+
+  // Shuffle a specific playlist using Fisher-Yates algorithm
+  shufflePlaylist(playlistName, currentTrack = null) {
+    if (!this.playlists.has(playlistName)) {
+      return { success: false, message: `Playlist "${playlistName}" not found` };
+    }
+
+    const playlist = this.playlists.get(playlistName);
+
+    if (playlist.tracks.length === 0) {
+      return { success: false, message: 'Playlist is empty' };
+    }
+
+    if (playlist.tracks.length === 1) {
+      return { success: false, message: 'Playlist has only one track, no need to shuffle' };
+    }
+
+    // If already shuffled, restore original order first
+    if (playlist.shuffled && playlist.originalTrackOrder) {
+      playlist.tracks = [...playlist.originalTrackOrder];
+    }
+
+    // Save original track order before shuffling
+    playlist.originalTrackOrder = [...playlist.tracks];
+
+    // Shuffle the tracks
+    playlist.tracks = this.fisherYatesShuffle(playlist.tracks, currentTrack);
+    playlist.shuffled = true;
+    playlist.modified = new Date().toISOString();
+
+    // Reset current track index to 0 (where current track is now)
+    if (currentTrack && playlistName === this.selectedPlaylist) {
+      this.currentTrackIndex = 0;
+    }
+
+    // Save to disk
+    if (this.savePlaylist(playlistName, playlist)) {
+      return {
+        success: true,
+        trackCount: playlist.tracks.length
+      };
+    } else {
+      // Rollback on save failure
+      playlist.tracks = [...playlist.originalTrackOrder];
+      playlist.shuffled = false;
+      delete playlist.originalTrackOrder;
+      return { success: false, message: 'Failed to save playlist' };
+    }
+  }
+
+  // Restore original order for a playlist
+  unshufflePlaylist(playlistName) {
+    if (!this.playlists.has(playlistName)) {
+      return { success: false, message: `Playlist "${playlistName}" not found` };
+    }
+
+    const playlist = this.playlists.get(playlistName);
+
+    if (!playlist.shuffled) {
+      return { success: false, message: 'Playlist is not shuffled' };
+    }
+
+    if (playlist.originalTrackOrder && playlist.originalTrackOrder.length > 0) {
+      playlist.tracks = [...playlist.originalTrackOrder];
+    }
+
+    playlist.shuffled = false;
+    playlist.originalTrackOrder = [];
+    playlist.modified = new Date().toISOString();
+
+    // Reset current track index
+    if (playlistName === this.selectedPlaylist) {
+      this.currentTrackIndex = -1;
+    }
+
+    // Save to disk
+    this.savePlaylist(playlistName, playlist);
+
+    return { success: true };
+  }
+
+  // Fisher-Yates shuffle algorithm
+  fisherYatesShuffle(array, currentItem = null) {
+    // Create a copy to avoid mutating original
+    const shuffled = [...array];
+    let currentIndex = -1;
+
+    // If currentItem exists, find it and remove it temporarily
+    if (currentItem) {
+      currentIndex = shuffled.findIndex(track => track.path === currentItem.path);
+      if (currentIndex !== -1) {
+        shuffled.splice(currentIndex, 1);
+      }
+    }
+
+    // Fisher-Yates shuffle
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+    // If currentItem exists, put it at position 0
+    if (currentItem && currentIndex !== -1) {
+      shuffled.unshift(currentItem);
+    }
+
+    return shuffled;
   }
 }
 

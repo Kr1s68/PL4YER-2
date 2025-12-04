@@ -31,6 +31,10 @@ class CommandOrchestrator {
       this.audioPlayer,
       this.printer
     );
+    this.shuffleHandler = new window.ShuffleHandler(
+      this.playlistOrchestrator,
+      this.printer
+    );
   }
 
   handleHelp() {
@@ -124,6 +128,10 @@ class CommandOrchestrator {
       // Route to song handler for random selection
       return this.songHandler.handlePrevious();
     }
+  }
+
+  handleShuffle(command) {
+    return this.shuffleHandler.handleShuffle(command);
   }
 }
 

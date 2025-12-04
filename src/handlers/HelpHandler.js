@@ -99,6 +99,20 @@ class HelpHandler {
       "  resume                  - Resume audio playback",
       "info"
     );
+    this.printer.print("", "output");
+    this.printer.print("Shuffle:", "info");
+    this.printer.print(
+      "  shuffle                 - Toggle shuffle mode on/off",
+      "info"
+    );
+    this.printer.print(
+      "  shuffle on/off          - Explicitly enable/disable shuffle",
+      "info"
+    );
+    this.printer.print(
+      "  shuffle playlist <name> - Shuffle a specific playlist",
+      "info"
+    );
   }
 }
 
