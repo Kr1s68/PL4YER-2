@@ -99,6 +99,9 @@ class CommandProcessor {
       case "prev":
         return this.commandOrchestrator.handlePrevious();
 
+      case "shuffle":
+        return this.commandOrchestrator.handleShuffle(command);
+
       default:
         // Handle commands with parameters
         if (cmd.startsWith("echo ")) {
@@ -119,6 +122,8 @@ class CommandProcessor {
           return this.commandOrchestrator.handleResume();
         } else if (cmd.startsWith("volume")) {
           return this.commandOrchestrator.handleVolume(command);
+        } else if (cmd.startsWith("shuffle ")) {
+          return this.commandOrchestrator.handleShuffle(command);
         } else {
           return this.commandOrchestrator.handleUnknown(command);
         }
